@@ -1,7 +1,8 @@
 .section .data
-  str1:       .string "ESTE EH UM TESTE\n"
+  str1:       .string "ESTE EH UM TESTE"
   str2:       .string "%d\n"
   str3:       .string "%p\n"
+  str4:       .string "%s\n"
   HEAP_START: .quad 0
   HEAP_END:   .quad 0
 
@@ -41,7 +42,7 @@ finalizaAlocador:
   ret
 
 
-imprime:
+imprime_ponteiro:
 # Registro de ativacao
   pushq %rbp
   movq %rsp, %rbp
@@ -49,11 +50,29 @@ imprime:
 # Imprime
   movq HEAP_END, %rax
   cmpq %rax, HEAP_START     # Previne segfault
-  jge ret
+  jge ret_pointer
   mov $str3, %rdi
   call printf
 
-  ret:
+  ret_pointer:
+# Retorna
+  pop %rbp
+  ret
+
+
+imprime_string:
+# Registro de ativacao
+  pushq %rbp
+  movq %rsp, %rbp
+
+# Imprime
+  movq HEAP_END, %rax
+  cmpq %rax, HEAP_START     # Previne segfault
+  jge ret_string
+  mov $str4, %rdi
+  call printf
+
+  ret_string:
 # Retorna
   pop %rbp
   ret
@@ -109,33 +128,26 @@ main:
   movq $100, %rdi
   call malloca
 
-# Imprime nova alocacao muda brk
+# Imprime posicao do fim da heap
   movq HEAP_END, %rsi
-  call imprime
+  call imprime_ponteiro
 
-# Desaloca 50 bytes
-  movq $50, %rdi
-  call desmalloca
-
-# Imprime nova alocacao muda brk
-  movq HEAP_END, %rsi
-  call imprime
-
-# Desaloca 50 bytes
-  movq $50, %rdi
-  call desmalloca
-
-# Imprime nova alocacao muda brk
-  movq HEAP_END, %rsi
-  call imprime
-
-# Aloca 100 bytes
-  movq $100, %rdi
-  call malloca
-
-# Imprime nova alocacao muda brk
+# Imprime posicao do inicio da heap
   movq HEAP_START, %rsi
-  call imprime
+  call imprime_ponteiro
+
+# Escreve string na posição liberada pelo malloc
+  movq HEAP_START, %rax
+  mov  $str1, %rbx
+  movq %rbx, (%rax)
+
+# Imprime posicao do malloc
+  movq (%rax), %rsi
+  call imprime_string
+
+# Desaloca 50 bytes
+  movq $100, %rdi
+  call desmalloca
 
 
 

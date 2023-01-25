@@ -1,7 +1,7 @@
 # SB_Dynamic_Mem_Manager
 Implementations of dynamic memory operators
 
-The following c code is translated to assembly:
+The following c code is translated to x86 assembly:
 ```
 #include <stdio.h>
 #include <stdlib.h>

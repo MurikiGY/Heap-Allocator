@@ -123,18 +123,14 @@ main:
   call iniciaAlocador
 
 
+loop:
+  movq -16(%rbp), %rbx
+  cmpq $5, %rbx
+  jge fim_loop 
 
 # Aloca 100 bytes
-  movq $100, %rdi
+  movq $15, %rdi
   call malloca
-
-# Imprime posicao do fim da heap
-  movq HEAP_END, %rsi
-  call imprime_ponteiro
-
-# Imprime posicao do inicio da heap
-  movq HEAP_START, %rsi
-  call imprime_ponteiro
 
 # Escreve string na posição liberada pelo malloc
   movq HEAP_START, %rax
@@ -146,9 +142,14 @@ main:
   call imprime_string
 
 # Desaloca 50 bytes
-  movq $100, %rdi
+  movq $15, %rdi
   call desmalloca
 
+  movq -16(%rbp), %rbx
+  addq $1, %rbx
+  movq %rbx, -16(%rbp)
+  jmp loop
+fim_loop:
 
 
 # Destroi alocador

@@ -106,9 +106,6 @@ alocaMem:
   cmpq %rdi, %rcx
   jl loop_mult
 
-  movq %rcx, %rsi
-  call imprime_inteiro
-
   movq %rcx, %rdi
   call expandeHeap
 
@@ -121,6 +118,7 @@ expandeHeap:
   movq %rsp, %rbp
 
 # expande brk, rdi tem o espaco a alocar
+  movq %rdi, %rcx
   movq $12, %rax
   movq HEAP_END, %rbx
   addq $16, %rbx        # rbx aponta para o fim do header
@@ -129,7 +127,7 @@ expandeHeap:
   movq %rax, HEAP_END   # Atualiza fim da heap
   movq %rbx, %rax       # Retorna pointeiro alocado
   movq $1, -16(%rbx)    # Seta flag pra 1
-  movq %rdi, -8(%rbx)   # Configura size
+  movq %rcx, -8(%rbx)   # Configura size
 
 # Retorna
   pop %rbp
@@ -142,7 +140,13 @@ liberaMem:
   movq %rsp, %rbp
 
 # rdi aponta para fim do header
-  movq $0, -16(%rdi)
+  movq -16(%rdi), %rsi
+  call imprime_inteiro
+  movq -8(%rdi), %rsi
+  call imprime_inteiro
+  movq $0, -16(%rdi)        # Seta flag pra zero
+  movq -16(%rdi), %rsi
+  call imprime_inteiro
 
 # Retorna
   pop %rbp
@@ -174,7 +178,7 @@ loop:
   jge fim_loop 
 
 # Aloca bytes
-  movq $18000, %rdi
+  movq $100, %rdi
   call alocaMem
 
 # Salva ponteiro

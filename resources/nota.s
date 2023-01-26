@@ -6,3 +6,17 @@
 # Algoritmo do syscall para brk
 altere brk com o valor passado em %rdi
 retorne a posicao de brk em %rax
+
+alocaMem:
+  Testa se heap vazia
+    expandeHeap
+  else
+    busca bestFit
+    se econtrou{
+      seta flag,
+      seta tamanho,
+      retorna endereco da alocacao
+    } else
+      expandeHeap
+
+

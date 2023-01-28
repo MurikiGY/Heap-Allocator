@@ -97,10 +97,10 @@ alocaMem:
 # quant a alocar esta em rdi
 # mod 4096
 # rbx multiplicador
-# rcx resultado final
+# rcx quantidade a alocar final
   movq $1, %rbx
   loop_mult:
-  movq $4096, %rcx
+  movq $8, %rcx
   imul %rbx, %rcx
   addq $1, %rbx
   cmpq %rdi, %rcx
@@ -113,40 +113,48 @@ alocaMem:
   pop %rbp
   ret
 
+
 expandeHeap:
   pushq %rbp
   movq %rsp, %rbp
+  subq $16,%rsp
 
-# expande brk, rdi tem o espaco a alocar
-  movq %rdi, %rcx
+# expande brk, rdi tem o tamanho da alocacao
+  movq %rdi,-8(%rbp)    # Salva tamanho da alocacao na stack
   movq $12, %rax
   movq HEAP_END, %rbx
-  addq $16, %rbx        # rbx aponta para o fim do header
-  addq %rbx, %rdi
+  addq $16, %rbx        # rbx aponta para o fim do header da nova alocacao
+  addq %rbx, %rdi       # rdi recebe nova posicao do brk
+  movq %rbx, -16(%rbp)  # Salva valor de rbx na stack, pois tem que retornar na chamada
   syscall
+  movq -16(%rbp), %rbx  # Retorna valor de rbx 
   movq %rax, HEAP_END   # Atualiza fim da heap
-  movq %rbx, %rax       # Retorna pointeiro alocado
-  movq $1, -16(%rbx)    # Seta flag pra 1
-  movq %rcx, -8(%rbx)   # Configura size
+  movq $1, -16(%rbx)    # Seta flag da memoria alocada pra 1
+  movq -8(%rbp), %rcx   # rcx recebe tamanho da alocacao
+  movq %rcx, -8(%rbx)   # Configura flag com tamanho da memoria alocada
+  movq %rbx, %rax       # Seta pointeiro alocado como retorno da funcao
 
-# Retorna
+# Desfaz stack e retorna
+  movq -8(%rbp),%rdi
+  addq $16,%rsp
   pop %rbp
   ret
 
 
 liberaMem:
-# registro de ativacao
+# rdi possui endereco de espaco a ser liberado
   pushq %rbp
   movq %rsp, %rbp
 
-# rdi aponta para fim do header
-  movq -16(%rdi), %rsi
-  call imprime_inteiro
-  movq -8(%rdi), %rsi
-  call imprime_inteiro
+  #movq -16(%rdi), %rsi      # rsi recebe endereco da flag
+  #call imprime_inteiro
+  #movq -8(%rdi), %rsi
+  #call imprime_inteiro
+  #movq $0, -16(%rdi)        # Seta flag pra zero
+  #movq -16(%rdi), %rsi
+  #call imprime_inteiro
+
   movq $0, -16(%rdi)        # Seta flag pra zero
-  movq -16(%rdi), %rsi
-  call imprime_inteiro
 
 # Retorna
   pop %rbp
@@ -163,30 +171,23 @@ main:
 # Configura alocador
   call iniciaAlocador
 
-# Imprime algo
-  mov $str2, %rsi
-  call imprime_string
-
-#imprime fim da heap
-  movq HEAP_END, %rsi
-  call imprime_ponteiro
-
+## Imprime algo
+#  mov $str2, %rsi
+#  call imprime_string
+#
+##imprime fim da heap
+#  movq HEAP_END, %rsi
+#  call imprime_ponteiro
 
 loop:
   movq -16(%rbp), %rbx
-  cmpq $5, %rbx
+  cmpq $15, %rbx
   jge fim_loop 
 
 # Aloca bytes
-  movq $100, %rdi
+  movq $5, %rdi
   call alocaMem
-
-# Salva ponteiro
-  movq %rax, -8(%rbp)
-
-#imprime fim da heap
-  movq HEAP_END, %rsi
-  call imprime_ponteiro
+  movq %rax, -8(%rbp)   # Salva retorno do malloc na stack
 
 # Desaloca bytes
   movq -8(%rbp), %rdi
@@ -197,7 +198,6 @@ loop:
   movq %rbx, -16(%rbp)
   jmp loop
 fim_loop:
-
 # Destroi alocador
   call finalizaAlocador
 

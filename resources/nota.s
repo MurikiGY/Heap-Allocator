@@ -12,7 +12,7 @@ alocaMem:
     expandeHeap
   else
     busca bestFit
-    se econtrou{
+    se econtrou {
       seta flag,
       seta tamanho,
       retorna endereco da alocacao

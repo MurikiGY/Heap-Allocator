@@ -42,6 +42,7 @@ finalizaAlocador:
   pop %rbp
   ret
 
+
 imprime_inteiro:
 # Registro de ativacao
   pushq %rbp
@@ -89,15 +90,80 @@ imprime_string:
   ret
 
 
-alocaMem:
-# registro de ativacao
+BuscaBestFit:
   pushq %rbp
   movq %rsp, %rbp
 
-# quant a alocar esta em rdi
-# mod 4096
-# rbx multiplicador
-# rcx quantidade a alocar final
+  # Pseudo-codigo:
+  # rax = 0
+  # rcx = 0
+  # rbx = heap_start + 16
+  # enquanto rbx < heap_end
+  #   se (-8(rbx) >= rdi) && (-16(rbx) == 0) 
+  #     se (rcx == 0) || (-8(rbx) < rcx)
+  #       rcx = -8(%rbx)
+  #       rax = rbx
+  #   rbx = rbx + -8(rbx)
+  
+  movq $0, %rax
+  movq $0, %rcx
+  movq HEAP_START, %rbx
+  addq $16, %rbx            # rbx aponta para o final do header
+
+  loopBestFit:
+  cmpq %rbx, HEAP_END
+  jle fimLoopBestFit
+  movq -8(%rbx), %rdx       # rbx recebe tamanho da alocacao
+  
+  if1:
+  cmpq %rdi, %rdx           # Se tem espaço para a alocacao
+  jl incrementaLoopBestFit  # Se nao tem espaco, pula nodo
+    if2:
+    cmpq $0, -16(%rbx)          # Se a flag esta em 0
+    jne incrementaLoopBestFit   # Se flag diferente de 0, pula nodo
+      if3:
+      cmpq $0, %rcx
+      je inside_If3_OR          # Se rcx nao foi setado, seta rcx e rax 
+        if3_OR:
+        cmpq %rcx, -8(%rbx)
+        jge incrementaLoopBestFit  #Se tamanho do nodo maior ou igual rcx, pula nodo
+          inside_If3_OR:
+          movq %rbx, %rax
+          movq %rdx, %rcx
+  
+  incrementaLoopBestFit:
+  addq %rdx, %rbx           # rbx aponta para proxima alocacao de memoria
+  addq $16, %rbx
+  jmp loopBestFit
+  fimLoopBestFit:
+
+# Se não achou espaço, abre novo espaço
+  if4:
+  cmpq $0, %rax
+  jne if4_else
+    call expandeHeap          # Expande a heap
+  if4_else:
+    movq $1, -16(%rax)        # Seta flag para 1
+    jmp returnBestFit
+    
+  # Retorna bestFit
+  returnBestFit:
+  pop %rbp
+  ret
+
+
+alocaMem:
+  pushq %rbp
+  movq %rsp, %rbp
+
+# Testa se vai ser aloção mais que 0 bytes
+  cmpq $1, %rdi
+  jge calcMult
+  movq $0, %rax
+  jmp returnAlocaMem  #Se tamanho menor que 1, retorna 0
+  
+  calcMult:
+# quantidade a alocar esta em rdi | mod 4096 | rbx multiplicador | rcx resultado final
   movq $1, %rbx
   loop_mult:
   movq $8, %rcx
@@ -106,9 +172,20 @@ alocaMem:
   cmpq %rdi, %rcx
   jl loop_mult
 
+# Testa se a heap esta vazia
+  movq HEAP_START, %rbx
+  cmpq %rbx, HEAP_END
+  jg callBuscaBestFit   # Se heap não vazia, chama bestFit
+  
   movq %rcx, %rdi
   call expandeHeap
+  jmp returnAlocaMem
 
+  callBuscaBestFit:
+  movq %rcx, %rdi
+  call BuscaBestFit
+  
+  returnAlocaMem:
 # Retorna
   pop %rbp
   ret
@@ -161,17 +238,16 @@ liberaMem:
   ret
 
 
+
 main:
 #Inicia main e declara variaveis
   pushq %rbp
   movq  %rsp, %rbp
-  subq  $16, %rsp 
-  movq  $0, -16(%rbp)
+  subq  $40, %rsp 
 
 # Configura alocador
   call iniciaAlocador
 
-## Imprime algo
 #  mov $str2, %rsi
 #  call imprime_string
 #
@@ -179,25 +255,51 @@ main:
 #  movq HEAP_END, %rsi
 #  call imprime_ponteiro
 
-loop:
-  movq -16(%rbp), %rbx
-  cmpq $15, %rbx
-  jge fim_loop 
+# loop:
+#   movq -16(%rbp), %rbx
+#   cmpq $5, %rbx
+#   jge fim_loop 
 
 # Aloca bytes
-  movq $5, %rdi
+  movq $15, %rdi
   call alocaMem
-  movq %rax, -8(%rbp)   # Salva retorno do malloc na stack
+  movq %rax, -8(%rbp)
+
+# Aloca bytes
+  movq $7, %rdi
+  call alocaMem
+  movq %rax, -16(%rbp)
+
+# Aloca bytes
+  movq $25, %rdi
+  call alocaMem
+  movq %rax, -24(%rbp)
+
+# Aloca bytes
+  movq $40, %rdi
+  call alocaMem
+  movq %rax, -32(%rbp)
 
 # Desaloca bytes
   movq -8(%rbp), %rdi
   call liberaMem
 
-  movq -16(%rbp), %rbx
-  addq $1, %rbx
-  movq %rbx, -16(%rbp)
-  jmp loop
-fim_loop:
+# Desaloca bytes
+  movq -24(%rbp), %rdi
+  call liberaMem
+
+# Aloca bytes
+  movq $20, %rdi
+  call alocaMem
+  movq %rax, -24(%rbp)
+
+
+#  movq -16(%rbp), %rbx
+#  addq $1, %rbx
+#  movq %rbx, -16(%rbp)
+#  jmp loop
+#fim_loop:
+
 # Destroi alocador
   call finalizaAlocador
 

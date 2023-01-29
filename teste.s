@@ -43,53 +43,6 @@ finalizaAlocador:
   ret
 
 
-imprime_inteiro:
-# Registro de ativacao
-  pushq %rbp
-  movq %rsp, %rbp
-
-# Imprime
-  mov $str5, %rdi
-  call printf
-
-# Retorna
-  pop %rbp
-  ret
-
-
-imprime_ponteiro:
-# Registro de ativacao
-  pushq %rbp
-  movq %rsp, %rbp
-
-# Imprime
-  movq HEAP_END, %rax
-  cmpq %rax, HEAP_START     # Previne segfault
-  jge ret_pointer
-  mov $str3, %rdi
-  call printf
-
-  ret_pointer:
-# Retorna
-  pop %rbp
-  ret
-
-
-imprime_string:
-# Registro de ativacao
-  pushq %rbp
-  movq %rsp, %rbp
-
-# Imprime
-  mov $str4, %rdi
-  call printf
-
-  ret_string:
-# Retorna
-  pop %rbp
-  ret
-
-
 BuscaBestFit:
   pushq %rbp
   movq %rsp, %rbp
@@ -223,20 +176,11 @@ liberaMem:
   pushq %rbp
   movq %rsp, %rbp
 
-  #movq -16(%rdi), %rsi      # rsi recebe endereco da flag
-  #call imprime_inteiro
-  #movq -8(%rdi), %rsi
-  #call imprime_inteiro
-  #movq $0, -16(%rdi)        # Seta flag pra zero
-  #movq -16(%rdi), %rsi
-  #call imprime_inteiro
-
   movq $0, -16(%rdi)        # Seta flag pra zero
 
 # Retorna
   pop %rbp
   ret
-
 
 
 main:
@@ -247,13 +191,6 @@ main:
 
 # Configura alocador
   call iniciaAlocador
-
-#  mov $str2, %rsi
-#  call imprime_string
-#
-##imprime fim da heap
-#  movq HEAP_END, %rsi
-#  call imprime_ponteiro
 
 # loop:
 #   movq -16(%rbp), %rbx

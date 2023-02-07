@@ -1,19 +1,24 @@
-.section .data
-  str1:       .string "ESTE EH UM TESTE"
-  str2:       .string "\n=== API de alocação de memoria ===\n"
-  str3:       .string "%p\n"
-  str4:       .string "%s\n"
-  str5:       .string "%d\n"
-  HEAP_START: .quad 0
-  HEAP_END:   .quad 0
+ .section .data
+  str1:        .asciz "%d\n"
+  str2:        .asciz "\n=== API de alocação de memoria ===\n"
+  NEW_LINE:    .asciz "\n"
+  HEADER:      .asciz "################"
+  HEAP_START:  .quad 0
+  HEAP_END:    .quad 0
+  LAST_FIT:    .quad 0    # Variavel usada pelo algoritmo next fit
+  LIST_END:    .quad 0
 
 .section .text
 .globl main
 
+
 iniciaAlocador:
-# Registro de ativacao
   pushq %rbp
   movq %rsp, %rbp
+
+# imprime qualquer coisa
+  movq $str2, %rdi
+  call printf
 
 # Busca inicio da heap
   movq $12, %rax
@@ -21,14 +26,14 @@ iniciaAlocador:
   syscall
   movq %rax, HEAP_START
   movq %rax, HEAP_END
+  movq %rax, LIST_END
 
-# Retorna
   pop %rbp
   ret
 
 
+
 finalizaAlocador:
-# Registro de ativacao
   pushq %rbp
   movq %rsp, %rbp
 
@@ -37,138 +42,114 @@ finalizaAlocador:
   movq HEAP_START, %rdi
   syscall
   movq %rax, HEAP_END
+  movq %rax, LIST_END
 
-# Retorna
   pop %rbp
   ret
 
 
-BuscaBestFit:
+  
+imprimeChar:
+# rsi possui quantidade de caracteres a serem impressos
+# rdi possui o caractere a ser impresso
   pushq %rbp
   movq %rsp, %rbp
-
-  # Pseudo-codigo:
-  # rax = 0
-  # rcx = 0
-  # rbx = heap_start + 16
-  # enquanto rbx < heap_end
-  #   se (-8(rbx) >= rdi) && (-16(rbx) == 0) 
-  #     se (rcx == 0) || (-8(rbx) < rcx)
-  #       rcx = -8(%rbx)
-  #       rax = rbx
-  #   rbx = rbx + -8(rbx)
   
-  movq $0, %rax
-  movq $0, %rcx
-  movq HEAP_START, %rbx
-  addq $16, %rbx            # rbx aponta para o final do header
+  movq $1,%rbx
+  loopImprimeChar:
+  cmpq %rdi, %rbx
+  jl returnImprimeChar
+    call putchar
+    addq $1, %rbx
+  jmp loopImprimeChar
 
-  loopBestFit:
-  cmpq %rbx, HEAP_END
-  jle fimLoopBestFit
-  movq -8(%rbx), %rdx       # rbx recebe tamanho da alocacao
-  
-  if1:
-  cmpq %rdi, %rdx           # Se tem espaço para a alocacao
-  jl incrementaLoopBestFit  # Se nao tem espaco, pula nodo
-    if2:
-    cmpq $0, -16(%rbx)          # Se a flag esta em 0
-    jne incrementaLoopBestFit   # Se flag diferente de 0, pula nodo
-      if3:
-      cmpq $0, %rcx
-      je inside_If3_OR          # Se rcx nao foi setado, seta rcx e rax 
-        if3_OR:
-        cmpq %rcx, -8(%rbx)
-        jge incrementaLoopBestFit  #Se tamanho do nodo maior ou igual rcx, pula nodo
-          inside_If3_OR:
-          movq %rbx, %rax
-          movq %rdx, %rcx
-  
-  incrementaLoopBestFit:
-  addq %rdx, %rbx           # rbx aponta para proxima alocacao de memoria
-  addq $16, %rbx
-  jmp loopBestFit
-  fimLoopBestFit:
-
-# Se não achou espaço, abre novo espaço
-  if4:
-  cmpq $0, %rax
-  jne if4_else
-    call expandeHeap          # Expande a heap
-  if4_else:
-    movq $1, -16(%rax)        # Seta flag para 1
-    jmp returnBestFit
-    
-  # Retorna bestFit
-  returnBestFit:
-  pop %rbp
+  returnImprimeChar:
+  popq %rbp
   ret
+  
 
-
-alocaMem:
+imprimeMapa:
   pushq %rbp
   movq %rsp, %rbp
+  pushq %rdi
+  pushq %rsi
 
-# Testa se vai ser aloção mais que 0 bytes
-  cmpq $1, %rdi
-  jge calcMult
-  movq $0, %rax
-  jmp returnAlocaMem  #Se tamanho menor que 1, retorna 0
-  
-  calcMult:
-# quantidade a alocar esta em rdi | mod 4096 | rbx multiplicador | rcx resultado final
-  movq $1, %rbx
-  loop_mult:
-  movq $8, %rcx
-  imul %rbx, %rcx
-  addq $1, %rbx
-  cmpq %rdi, %rcx
-  jl loop_mult
-
-# Testa se a heap esta vazia
-  movq HEAP_START, %rbx
-  cmpq %rbx, HEAP_END
-  jg callBuscaBestFit   # Se heap não vazia, chama bestFit
-  
-  movq %rcx, %rdi
-  call expandeHeap
-  jmp returnAlocaMem
-
-  callBuscaBestFit:
-  movq %rcx, %rdi
-  call BuscaBestFit
-  
-  returnAlocaMem:
-# Retorna
-  pop %rbp
-  ret
-
-
-expandeHeap:
-  pushq %rbp
-  movq %rsp, %rbp
-  subq $16,%rsp
-
-# expande brk, rdi tem o tamanho da alocacao
-  movq %rdi,-8(%rbp)    # Salva tamanho da alocacao na stack
-  movq $12, %rax
+  # Testa heap vazia
   movq HEAP_END, %rbx
-  addq $16, %rbx        # rbx aponta para o fim do header da nova alocacao
-  addq %rbx, %rdi       # rdi recebe nova posicao do brk
-  movq %rbx, -16(%rbp)  # Salva valor de rbx na stack, pois tem que retornar na chamada
-  syscall
-  movq -16(%rbp), %rbx  # Retorna valor de rbx 
-  movq %rax, HEAP_END   # Atualiza fim da heap
-  movq $1, -16(%rbx)    # Seta flag da memoria alocada pra 1
-  movq -8(%rbp), %rcx   # rcx recebe tamanho da alocacao
-  movq %rcx, -8(%rbx)   # Configura flag com tamanho da memoria alocada
-  movq %rbx, %rax       # Seta pointeiro alocado como retorno da funcao
+  cmpq HEAP_START,  %rbx
+  jle returnImprimeMapa  # se Heap_End == Heap_Start, return
 
-# Desfaz stack e retorna
-  movq -8(%rbp),%rdi
-  addq $16,%rsp
+  movq HEAP_START, %rbx
+  loopImprimeMapa:
+  cmpq LIST_END, %rbx
+  jge imprimeSpaceLeft   # enquanto rbx diferente de list_end, imprime a lista
+
+    # Imprime header
+    mov $HEADER, %rdi       # rdi recebe string do header
+    call printf
+
+    movq 8(%rbx),%rsi    
+    movq $'-',%rdi
+    cmpq $0, 0(%rbx)
+    je imprimeAlocacao
+    movq $'+',%rdi
+    
+    imprimeAlocacao:
+        call imprimeChar
+    
+    addq 8(%rbx), %rbx
+    jmp loopImprimeMapa
+
+  imprimeSpaceLeft:     # imprime spaco restante da heap
+  movq HEAP_END, %rsi
+  subq LIST_END, %rsi   # rsi possui space left
+  movq $'-',%rdi
+  call imprimeChar
+  
+  mov $NEW_LINE,%rdi
+  call printf
+
+  #restaura registradores
+  popq %rsi
+  popq %rdi 
+
+  returnImprimeMapa:
   pop %rbp
   ret
+
+
+
+fragmenta:
+# rdi possui tamanho da alocacao do usuario
+# rsi possui endereco do fim do header do noh a ser fragmentado
+  pushq %rbp
+  movq %rsp, %rbp
+
+# se (rdi+16+1) < -8(%rsi) //se tamanho do noh eh pelo menos (aloc do usr + tam do header + 1), fragmenta
+#   rsi+rdi = 0 //seta flag da fragmentacao
+#   rsi+rdi+8 = -8(%rsi) - (rdi+16) //seta tamanho 
+#   -8(%rsi) =  rdi //seta novo tamanho do no
+
+  push %rdi
+  addq $17,%rdi
+  cmpq %rdi, -8(%rsi)
+  jl returnFragmenta
+    popq %rdi
+    movq %rsi, %rbx
+    addq %rdi, %rbx             # Rbx recebe endereco inicial do noh fragmentado
+    movq $0, 0(%rbx)            # Seta flag do noh fragmentado
+    
+    movq -8(%rsi), %rdx
+    subq %rdi, %rdx
+    subq $16, %rdx              # Rdx recebe tamanho alocavel do novo noh fragmentado
+    movq %rdx, 8(%rbx)          # Seta tamanho do noh fragmentado
+
+    movq %rdi, -8(%rsi)         # Seta tamanho do no original
+
+  returnFragmenta:
+  popq %rbp
+  ret
+
 
 
 liberaMem:
@@ -183,63 +164,243 @@ liberaMem:
   ret
 
 
+
+buscaFirstFit:
+  pushq %rbp
+  movq %rsp, %rbp
+
+  # Percorre lista
+  movq HEAP_START, %rbx
+  loopBuscaFirstFit:
+  cmpq LIST_END, %rbx
+  jge fimLoopFirstFit
+    #Testa flag
+    cmpq $0, 0(%rbx)
+    jne nextNode
+    cmpq 8(%rbx), %rdi
+    jg nextNode
+
+    # Aloca posição
+    movq $1, 0(%rbx)
+    movq %rbx, %rsi
+    addq $16, %rsi
+    call fragmenta
+    movq %rsi, %rax
+    jmp fimLoopFirstFit
+
+    nextNode:
+        addq 8(%rbx), %rbx
+        jmp loopBuscaFirstFit
+
+  fimLoopFirstFit:
+  pop %rbp
+  ret
+
+
+
+buscaNextFit:
+  pushq %rbp
+  movq %rsp, %rbp
+
+  #  se LAST_FIT == 0
+  #      rbx = HEAP_START
+  #  else 
+  #      rbx = LAST_FIT
+  #
+  #  if (0(%rbx) == 0) 
+  #      0(%rbx) = 1
+  #      rdi = rdi
+  #      rax = rbx+16
+  #      rsi = rax
+  #      fragmenta()
+  #      return
+  #  
+  #  rbx = rbx+8(%rbx)
+  #  while (rbx != LAST_FIT){
+  #    if (%rbx == HEAP_END)
+  #        %rbx = HEAP_START
+  #    else{
+  #        if (0(%rbx) == 0) {
+  #            0(%rbx) = 1
+  #            rdi = rdi
+  #            rax = rbx+16
+  #            rsi = rax
+  #            fragmenta()
+  #            return
+  #        }
+  #        rbx = rbx+8(%rbx)
+  #    }
+  #  }
+  #
+  #  if (space_left  eh suficiente)
+  #      0(%LIST_END) = 1
+  #      8(%LIST_END) = rdi
+  #      rax = LIST_END + 16
+  #      LIST_END = LIST_END + 16 + rdi
+  #  else 
+  #      expande
+ 
+  popq %rbp
+  ret
+
+
+buscaBestFit:
+  pushq %rbp
+  movq %rsp, %rbp
+
+  #rax = 0 
+  #rcx = 0 
+  #rbx = HEAP_START + 16
+  #enquanto rbx < LIST_END
+  #  se (-8(%rbx) > %rdi) e (-16(%rbx) == 0)
+  #      se (se rcx == 0) ou (-8(%rbx) < rcx)
+  #          rcx = -8(%rbx)
+  #          rax = rbx
+  #  rbx = rbx + -8(%rbx)
+  #se rax
+  #  -16(%rax) = 1
+  #  rdi = rdi
+  #  rsi = rax 
+  #  fragmenta_no()
+  #else
+  #  space_left = HEAP_END - LIST_END
+  #  se space_left > %rdi
+  #    rax = LIST_END+16
+  #    -16(%rax) = 1
+  #    rdi = rdi
+  #    rsi = rax
+  #    fragmenta_no()
+  #  else 
+  #    expande
+  #ret
+
+  returnBestFit:
+  pop %rbp
+  ret
+
+
+
+
+
+#Expande heap e seta flag
+expandeHeap:
+#rdi possui tamanho a ser alocado para o usuario
+  pushq %rbp
+  movq %rsp, %rbp
+
+  pushq %rdi            #Salva o rdi
+  add $16, %rdi         #rdi guarda a quantidade a expandir
+
+  # Calcula space left e soma 4096
+  movq HEAP_END, %rbx
+  subq LIST_END, %rbx
+  addq $4096, %rbx
+  
+  divLoop:
+  cmpq %rbx, %rdi
+  jle fimDivLoop
+  
+    addq $4096, %rbx
+    jmp divLoop
+  fimDivLoop:
+
+  # Expande brk
+  movq $12, %rax
+  addq LIST_END, %rbx
+  movq %rbx, %rdi
+  syscall
+  pop %rdi
+
+  # Seta flags
+  movq LIST_END, %rbx
+  movq $1, 0(%rbx)
+  movq %rdi, 8(%rbx)
+  
+  # Atualiza variaveis
+  movq %rax, HEAP_END       #Atualiza HEAP_END  
+  addq $16, %rbx
+  movq %rbx, %rax           #Atualiza rax
+  addq %rdi, %rbx
+  movq %rbx, LIST_END       #Atualiza LIST_END
+  
+  pop %rbp
+  ret
+
+
+
+alocaMem:
+# rdi possui a quantidade a ser alocada
+  pushq %rbp
+  movq %rsp, %rbp
+
+  # Testa alocação maior que zero
+  cmpq $1, %rdi
+  jge aloca
+  movq $0, %rax
+  jmp returnAlocaMem
+
+    aloca:
+    # Testa se a heap esta vazia
+    movq HEAP_START, %rbx
+    cmpq %rbx, HEAP_END
+    jg callBuscaFirstFit   # Se heap não vazia, chama Busca
+    
+    #jg callBuscaBestFit    # Se heap não vazia, chama Busca
+    #jg callBuscaNextFit    # Se heap não vazia, chama Busca
+    
+        call expandeHeap
+        jmp returnAlocaMem
+
+    callBuscaFirstFit:
+        call buscaFirstFit
+        jmp returnAlocaMem
+
+    #callBuscaBestFit:
+    #    call buscaBestFit
+    #    jmp returnAlocaMem
+
+    #callBuscaNextFit:
+    #    call buscaNextFit
+    #    jmp returnAlocaMem
+
+  returnAlocaMem:
+  pop %rbp
+  ret
+
+
 main:
 #Inicia main e declara variaveis
   pushq %rbp
   movq  %rsp, %rbp
-  subq  $40, %rsp 
+  subq  $16, %rsp 
 
 # Configura alocador
   call iniciaAlocador
 
-# loop:
-#   movq -16(%rbp), %rbx
-#   cmpq $5, %rbx
-#   jge fim_loop 
 
-# Aloca bytes
-  movq $15, %rdi
-  call alocaMem
-  movq %rax, -8(%rbp)
+## Aloca bytes
+#  movq $8, %rdi
+#  call alocaMem
+#  movq %rax, -8(%rbp)
 
-# Aloca bytes
-  movq $7, %rdi
-  call alocaMem
-  movq %rax, -16(%rbp)
+## Aloca bytes
+#  movq $16, %rdi
+#  call alocaMem
+#  movq %rax, -24(%rbp)
+#
+## Desaloca bytes
+#  movq -16(%rbp), %rdi
+#  call liberaMem
+#
+## Desaloca bytes
+#  movq -24(%rbp), %rdi
+#  call liberaMem
 
-# Aloca bytes
-  movq $25, %rdi
-  call alocaMem
-  movq %rax, -24(%rbp)
-
-# Aloca bytes
-  movq $40, %rdi
-  call alocaMem
-  movq %rax, -32(%rbp)
-
-# Desaloca bytes
-  movq -8(%rbp), %rdi
-  call liberaMem
-
-# Desaloca bytes
-  movq -24(%rbp), %rdi
-  call liberaMem
-
-# Aloca bytes
-  movq $20, %rdi
-  call alocaMem
-  movq %rax, -24(%rbp)
-
-
-#  movq -16(%rbp), %rbx
-#  addq $1, %rbx
-#  movq %rbx, -16(%rbp)
-#  jmp loop
-#fim_loop:
 
 # Destroi alocador
   call finalizaAlocador
 
 #Finaliza programa
   movq  $60, %rax
+  popq %rbp
   syscall

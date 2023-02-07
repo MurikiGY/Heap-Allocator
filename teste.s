@@ -1,6 +1,6 @@
  .section .data
   str1:        .asciz "%d\n"
-  str2:        .asciz "\n=== API de alocação de memoria ===\n"
+  str2:        .asciz "\n=== API de alocação de memoria ===\n\n"
   NEW_LINE:    .asciz "\n"
   HEADER:      .asciz "################"
   HEAP_START:  .quad 0
@@ -378,10 +378,20 @@ main:
   call iniciaAlocador
 
 
-## Aloca bytes
-#  movq $8, %rdi
-#  call alocaMem
-#  movq %rax, -8(%rbp)
+# Aloca bytes
+  movq $8, %rdi
+  call alocaMem
+  movq %rax, -8(%rbp)
+
+# imprime Mapa
+  call imprimeMapa
+
+# Desaloca bytes
+  movq -8(%rbp), %rdi
+  call liberaMem
+
+# imprime Mapa
+  call imprimeMapa
 
 ## Aloca bytes
 #  movq $16, %rdi

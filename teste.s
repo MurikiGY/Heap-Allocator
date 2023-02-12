@@ -17,7 +17,7 @@ iniciaAlocador:
   movq %rsp, %rbp
 
 # imprime qualquer coisa
-  movq $str2, %rdi
+  mov $str2, %rdi
   call printf
 
 # Busca inicio da heap
@@ -54,16 +54,18 @@ imprimeChar:
 # rdi possui o caractere a ser impresso
   pushq %rbp
   movq %rsp, %rbp
+  pushq %rbx
   
   movq $1,%rbx
   loopImprimeChar:
-  cmpq %rdi, %rbx
-  jl returnImprimeChar
+  cmpq %rsi, %rbx
+  jg returnImprimeChar
     call putchar
     addq $1, %rbx
   jmp loopImprimeChar
 
   returnImprimeChar:
+  popq %rbx
   popq %rbp
   ret
   
@@ -77,33 +79,34 @@ imprimeMapa:
   # Testa heap vazia
   movq HEAP_END, %rbx
   cmpq HEAP_START,  %rbx
-  jle returnImprimeMapa  # se Heap_End == Heap_Start, return
+  jle returnImprimeMapa   # se Heap_End == Heap_Start, return
 
   movq HEAP_START, %rbx
   loopImprimeMapa:
   cmpq LIST_END, %rbx
-  jge imprimeSpaceLeft   # enquanto rbx diferente de list_end, imprime a lista
+  jge imprimeSpaceLeft    # enquanto rbx diferente de list_end, imprime a lista
 
     # Imprime header
-    mov $HEADER, %rdi       # rdi recebe string do header
-    call printf
+    mov $HEADER, %rdi
+    call printf           # Imprime Header
 
-    movq 8(%rbx),%rsi    
-    movq $'-',%rdi
+    movq 8(%rbx), %rsi    
+    movq $'-', %rdi
     cmpq $0, 0(%rbx)
     je imprimeAlocacao
-    movq $'+',%rdi
+    movq $'+', %rdi
     
     imprimeAlocacao:
         call imprimeChar
     
-    addq 8(%rbx), %rbx
+    addq 8(%rbx), %rbx    # Salta area alocada
+    addq $16, %rbx        # Salta Header
     jmp loopImprimeMapa
 
-  imprimeSpaceLeft:     # imprime spaco restante da heap
+  imprimeSpaceLeft:       # imprime spaco restante da heap
   movq HEAP_END, %rsi
-  subq LIST_END, %rsi   # rsi possui space left
-  movq $'-',%rdi
+  subq LIST_END, %rsi     # rsi possui space left
+  movq $'-', %rdi
   call imprimeChar
   
   mov $NEW_LINE,%rdi

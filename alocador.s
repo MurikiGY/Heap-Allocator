@@ -214,9 +214,9 @@ firstFit:
 
     #Testa flag e tamanho
     cmpq $0, 0(%rbx)
-    jne nextNode
+    jne nextNodeFF
     cmpq 8(%rbx), %rdi
-    jg nextNode
+    jg nextNodeFF
 
     #Aloca na posição e retorna
     movq $1, 0(%rbx)
@@ -225,15 +225,13 @@ firstFit:
     movq %rsi, %rax         #seta endereco de retorno
 
     call fragmenta
-
     jmp returnFirstFit
 
-    nextNode:
-        movq 8(%rbx), %r12
-        addq $16, %r12      #r12 possui total quantidade de bytes do no atual
-        addq %r12, %rbx
-
-        jmp loopFirstFit
+    nextNodeFF:
+      movq 8(%rbx), %r12
+      addq $16, %r12      #r12 possui total quantidade de bytes do no atual
+      addq %r12, %rbx
+      jmp loopFirstFit
   fimLoopFirstFit:
 
   #se chegou aqui, nodo nao encontrado
@@ -323,6 +321,56 @@ bestFit:
   #  else 
   #    expande
   #ret
+
+  movq $0, %rax     # Endereco de retorno
+  movq $0, %rcx     # Nodo do BestFit
+
+  # Percorre lista
+  movq HEAP_START, %rbx
+  loopBestfit:
+  cmpq LSIT_END, %rbx
+  jge fimLoopBestfit
+
+    # Testa flag e tamanho
+    cmpq $0, 0(%rbx)
+    jne nextNodeBF
+    cmpq 8(%rbx), %rdi
+    jg nextNodeBF
+
+    # Testa rcx em 0
+    cmpq $0, %rcx
+    je rcxUpdate
+
+    # Testa rcx maior que nodo encontrado
+    movq 8(%rbx), %r12
+    movq 8(%rcx), %r15
+    cmpq %r12, %r15
+    jle nextNodeBF
+
+  rcxUpdate:
+  movq %rbx, %rcx
+
+  nextNodeBF:
+        movq 8(%rbx), %r12
+        addq $16, %r12      #r12 possui total quantidade de bytes do no atual
+        addq %r12, %rbx
+        jmp loopBestFit
+  fimLoopBestFit:
+
+  # Testa se encontrou algo
+  cmpq $0, %rcx
+  je callAlocaSpaceLeft
+
+    # Aloca onde aponta rcx
+    movq $1, 0(%rcx)        # Seta a flag
+    movq %rcx, %rsi
+    addq $16, %rsi
+    call fragmenta
+    jmp returnBestfit
+
+  # Nao encontrou nada, aloca logo apos LIST_END
+  callAlocaSpaceLeft:
+    call alocaSpaceLeft
 
   returnBestFit:
   popq %rbp

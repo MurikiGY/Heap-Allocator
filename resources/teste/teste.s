@@ -12,8 +12,11 @@
   LIST_END:    .quad 0
 
 .section .text
-.globl main
-
+.globl alocaMem 
+.globl iniciaAlocador
+.globl liberaMem
+.globl finalizaAlocador
+.globl imprimeMapa
 
 iniciaAlocador:
   pushq %rbp
@@ -49,27 +52,6 @@ finalizaAlocador:
   popq %rbp
   ret
 
-
-imprimeChar:
-# rsi possui quantidade de caracteres a serem impressos
-# rdi possui o caractere a ser impresso
-  pushq %rbp
-  movq %rsp, %rbp
-  
-  movq $1,%rcx
-  loopImprimeChar:
-  cmpq %rsi, %rcx
-  jg returnImprimeChar
-    pushq %rsi
-    #call printf
-    popq %rsi
-    addq $1, %rcx
-  jmp loopImprimeChar
-
-  returnImprimeChar:
-  popq %rbp
-  ret
-  
 
 imprimeMapa:
   pushq %rbp
@@ -365,13 +347,13 @@ expandeHeap:
   # Calcula space left e soma 4096
   movq HEAP_END, %rbx
   subq LIST_END, %rbx
-  addq $64, %rbx    # 4096 aqui
+  addq $140, %rbx    # 4096 aqui
   
   divLoop:
   cmpq %rbx, %rdi
   jle fimDivLoop
   
-    addq $64, %rbx    # 4096 aqui
+    addq $140, %rbx    # 4096 aqui
     jmp divLoop
   fimDivLoop:
 
@@ -436,102 +418,3 @@ alocaMem:
   pop %rbp
   ret
 
-
-main:
-#Inicia main e declara variaveis
-  pushq %rbp
-  movq  %rsp, %rbp
-  subq  $32, %rsp 
-
-# Configura alocador
-  call iniciaAlocador
-
-
-
-# Aloca bytes
-  movq $48, %rdi
-  call alocaMem
-  movq %rax, -8(%rbp)
-# imprime Mapa
-  call imprimeMapa
-
-# Aloca bytes
-  movq $32, %rdi
-  call alocaMem
-  movq %rax, -16(%rbp)
-# imprime Mapa
-  call imprimeMapa
-
-# Desaloca bytes
-   movq -8(%rbp), %rdi
-   call liberaMem
-# imprime Mapa
-  call imprimeMapa
-
- # Aloca bytes
-  movq $8, %rdi
-  call alocaMem
-  movq %rax, -8(%rbp)
-# imprime Mapa
-  call imprimeMapa
-
- # Aloca bytes
-  movq $5, %rdi
-  call alocaMem
-  movq %rax, -24(%rbp)
-# imprime Mapa
-  call imprimeMapa
-
-# Desaloca bytes
-   movq -16(%rbp), %rdi
-   call liberaMem
-# imprime Mapa
-  call imprimeMapa
-
- # Aloca bytes
-  movq $8, %rdi
-  call alocaMem
-  movq %rax, -16(%rbp)
-# imprime Mapa
-  call imprimeMapa
-
- # Aloca bytes
-  movq $3, %rdi
-  call alocaMem
-  movq %rax, -32(%rbp)
-# imprime Mapa
-  call imprimeMapa
-
-
-# # Aloca bytes
-#   movq $32, %rdi
-#   call alocaMem
-#   movq %rax, -8(%rbp)
-# 
-# # imprime Mapa
-#   call imprimeMapa
-# 
-# # Desaloca bytes
-#   movq -8(%rbp), %rdi
-#   call liberaMem
-# 
-# # imprime Mapa
-#   call imprimeMapa
-# 
-# # Aloca bytes
-#   movq $8, %rdi
-#   call alocaMem
-#   movq %rax, -8(%rbp)
-# 
-# # imprime Mapa
-#   call imprimeMapa
-
-
-
-# Destroi alocador
-  call finalizaAlocador
-
-#Finaliza programa
-  movq  $60, %rax
-  popq %rbp
-  syscall

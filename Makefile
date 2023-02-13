@@ -2,18 +2,20 @@ LINK = -dynamic-linker /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 \
 			 /usr/lib/x86_64-linux-gnu/crt1.o \
 			 /usr/lib/x86_64-linux-gnu/crti.o \
 			 /usr/lib/x86_64-linux-gnu/crtn.o
-#LINK = -dynamic-linker usr/lib/ld-linux-x86-64.so.2 /usr/lib/crt1.o  /usr/lib/crti.o /usr/lib/crtn.o
 
-all: teste
+all: meuAlocador
 
-teste: teste.o
-	ld teste.o -o teste $(LINK) -lc
+meuAlocador: alocador.o main.o
+	ld alocador.o main.o -o meuAlocador $(LINK) -lc
 
-teste.o: teste.s
-	as teste.s -o teste.o -g
+main.o: main.c
+	gcc -g -c main.c -o main.o
+
+alocador.o: alocador.s
+	as alocador.s -o alocador.o -g
 
 clean: 
-	-rm -f teste.o
+	-rm -f alocador.o main.o
 
 purge: clean
-	-rm -f teste
+	-rm -f meuAlocador

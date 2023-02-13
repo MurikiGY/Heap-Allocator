@@ -8,8 +8,8 @@
   EQUAL:       .asciz "="
   HEAP_START:  .quad 0
   HEAP_END:    .quad 0
-  LAST_FIT:    .quad 0    # Variavel usada pelo algoritmo next fit
   LIST_END:    .quad 0
+  LAST_FIT:    .quad 0    # Variavel usada pelo algoritmo next fit
 
 .section .text
 .globl alocaMem 
@@ -17,6 +17,7 @@
 .globl liberaMem
 .globl finalizaAlocador
 .globl imprimeMapa
+
 
 iniciaAlocador:
   pushq %rbp
@@ -62,7 +63,7 @@ imprimeMapa:
   # Testa heap vazia
   movq HEAP_END, %rbx
   cmpq HEAP_START,  %rbx
-  jle returnImprimeMapa   # se Heap_End == Heap_Start, return
+  jle returnImprimeMapa   # se Heap_End <= Heap_Start, return
 
   movq HEAP_START, %rbx
   loopImprimeMapa:
@@ -73,24 +74,25 @@ imprimeMapa:
     mov $HEADER, %rdi
     call printf           # Imprime Header
 
-    movq 8(%rbx), %r15
-    movq $0, %r12
-    loopAlocacao:
-    # Salva em rdi o sinal para imprimir
+    movq 8(%rbx), %r15    # r15: tamanho do nodo
+    movq $0, %r12         # r12: contador de impressao
+
+    imprimeNodo:
+    # Salva em rdi o sinal
     mov $MINUS, %rdi
     cmpq $0, 0(%rbx)
-    je imprimeAlocacao
+    je imprimeSinal
     mov $PLUS, %rdi
     
-    imprimeAlocacao:
+    imprimeSinal:
     cmpq %r15, %r12
-    jge fimImprimeAlocacao
+    jge fimImprimeNodo
 
     call printf
 
     addq $1, %r12
-    jmp loopAlocacao
-    fimImprimeAlocacao:
+    jmp imprimeNodo
+    fimImprimeNodo:
 
     # Salta para o proximo nodo
     addq 8(%rbx), %rbx    
@@ -98,18 +100,18 @@ imprimeMapa:
     jmp loopImprimeMapa
 
   imprimeSpaceLeft:       # imprime restante da heap
-  movq HEAP_END, %r12
-  subq LIST_END, %r12     # r12 possui space left
+  movq HEAP_END, %r15
+  subq LIST_END, %r15     # r15: space left
 
-  movq $0, %r15
+  movq $0, %r12           # contador de impressao
   loopSpaceLeft:
-  cmpq %r12, %r15
+  cmpq %r15, %r12
   jge fimLoopSpaceLeft
 
   mov $EQUAL, %rdi
   call printf
 
-  addq $1, %r15
+  addq $1, %r12
   jmp loopSpaceLeft
   fimLoopSpaceLeft:
 
@@ -125,9 +127,49 @@ imprimeMapa:
   ret
 
 
+#tenta alocar rdi bytes no space_left
+#retorna endereco da nova alocacao
+#caso nao consiga, rax retorna NULL
+alocaSpaceLeft:
+#rdi: Tamanho solicitado pelo usuario
+  pushq %rbp
+  movq %rsp, %rbp
+
+  movq $0, %rax
+  movq %rdi, %r15
+  addq $16, %r15            #r15 possui o tamanho do nodo
+    
+  movq HEAP_END, %r12
+  subq LIST_END, %r12       #r12 possui space left
+
+  cmpq %r12, %r15
+  jg returnAlocaSpaceLeft   #Se nodo maior que spaceLeft retorna 0
+
+    ##############
+    # seta flags e aloca
+    movq LIST_END, %r15
+    movq $1, 0(%r15)        #seta flag de ocupado
+    movq %rdi, 8(%r15)      #seta tamanho
+
+    movq %r15, %rax
+    addq $16, %rax          #seta endereco de retorno
+    ##############
+
+    #atualiza LIST_END
+    movq LIST_END, %r12
+    addq $16, %r12
+    addq %rdi, %r12
+    movq %r12, LIST_END
+
+  returnAlocaSpaceLeft:
+  popq %rbp
+  ret
+
+
+
 fragmenta:
-# rdi possui tamanho da alocacao do usuario
-# rsi possui endereco do fim do header do nodo a ser fragmentado
+# rdi: Tamanho solicitado pelo usuario
+# rsi: Endereco do fim do header do nodo a ser fragmentado
   pushq %rbp
   movq %rsp, %rbp
 
@@ -140,14 +182,15 @@ fragmenta:
   addq $17,%r12
 
   cmpq %r12, -8(%rsi)
-  jl returnFragmenta
+  jl returnFragmenta            # Se não tiver espaco, nao fragmenta
+
     movq %rsi, %rbx
     addq %rdi, %rbx             # Rbx aponta para endereco inicial do nodo fragmentado
-    movq $0, 0(%rbx)            # Seta flag do nodo fragmentado
     
+    movq $0, 0(%rbx)            # Seta flag do nodo fragmentado
     movq -8(%rsi), %rdx
     subq %rdi, %rdx
-    subq $16, %rdx              # Rdx recebe tamanho alocavel do novo noh fragmentado
+    subq $16, %rdx              # Rdx recebe tamanho alocavel do novo nodo fragmentado
     movq %rdx, 8(%rbx)          # Seta tamanho do nodo fragmentado
 
     movq %rdi, -8(%rsi)         # Seta novo tamanho do nodo original
@@ -156,55 +199,6 @@ fragmenta:
   popq %rbp
   ret
 
-
-liberaMem:
-# rdi: Endereço do nodo a ser liberado
-  pushq %rbp
-  movq %rsp, %rbp
-
-  movq $0, -16(%rdi)        # Seta flag pra zero
-
-# Retorna
-  popq %rbp
-  ret
-
-
-#tenta alocar rdi bytes no space_left
-#retorna endereco da nova alocacao
-#caso nao consiga, retorna NULL
-alocaSpaceLeft:
-#rdi: Tamanho solicitado pelo usuario
-  pushq %rbp
-  movq %rsp, %rbp
-
-  movq $0, %rax
-  movq %rdi, %r15
-  addq $16, %r15          #r15 possui espaco necessario
-    
-  movq HEAP_END, %r12
-  subq LIST_END, %r12     #r12 possui space left
-  cmpq %r12, %r15
-  jg fimAlocaSpaceLeft    #Se space left nao eh suficiente retorna 0
-
-    ##############
-    # seta flags e aloca
-    movq LIST_END, %r15
-    movq $1, 0(%r15)      #seta flag de ocupado
-    movq %rdi, 8(%r15)    #seta tamanho
-
-    movq %r15, %rax
-    addq $16, %rax        #seta endereco de retorno
-    ##############
-
-    #atualiza LIST_END
-    movq LIST_END, %r12
-    addq $16, %r12
-    addq %rdi, %r12
-    movq %r12, LIST_END
-
-  fimAlocaSpaceLeft:
-  popq %rbp
-  ret
 
 
 firstFit:
@@ -232,7 +226,7 @@ firstFit:
 
     call fragmenta
 
-    jmp fimFirstFit
+    jmp returnFirstFit
 
     nextNode:
         movq 8(%rbx), %r12
@@ -246,10 +240,10 @@ firstFit:
   call alocaSpaceLeft
 
   cmpq $0, %rax             #se alocado no space left, retorna
-  jne fimFirstFit
+  jne returnFirstFit
     call expandeHeap
 
-  fimFirstFit:
+  returnFirstFit:
   popq %rbp
   ret
 
@@ -349,13 +343,13 @@ expandeHeap:
   subq LIST_END, %rbx
   addq $140, %rbx    # 4096 aqui
   
-  divLoop:
+  multLoop:
   cmpq %rbx, %rdi
-  jle fimDivLoop
+  jle fimMultLoop
   
     addq $140, %rbx    # 4096 aqui
-    jmp divLoop
-  fimDivLoop:
+    jmp multLoop
+  fimMultLoop:
 
   # Expande brk
   movq $12, %rax
@@ -364,7 +358,7 @@ expandeHeap:
   syscall
   pop %rdi
 
-  # Seta flags
+  # Seta flags e tamanho
   movq LIST_END, %rbx
   movq $1, 0(%rbx)
   movq %rdi, 8(%rbx)
@@ -372,7 +366,7 @@ expandeHeap:
   # Atualiza variaveis
   movq %rax, HEAP_END       #Atualiza HEAP_END  
   addq $16, %rbx
-  movq %rbx, %rax           #Atualiza rax
+  movq %rbx, %rax           #Atualiza retorno rax
   addq %rdi, %rbx
   movq %rbx, LIST_END       #Atualiza LIST_END
   
@@ -381,7 +375,7 @@ expandeHeap:
 
 
 alocaMem:
-# rdi: N de bytes a alocar
+# rdi: Tamanho solicitado pelo usuario
   pushq %rbp
   movq %rsp, %rbp
 
@@ -416,5 +410,17 @@ alocaMem:
 
   returnAlocaMem:
   pop %rbp
+  ret
+
+
+liberaMem:
+# rdi: Endereço do nodo a ser liberado
+  pushq %rbp
+  movq %rsp, %rbp
+
+  movq $0, -16(%rdi)        # Seta flag pra zero
+
+# Retorna
+  popq %rbp
   ret
 

@@ -1,3 +1,4 @@
+#include <stdio.h>
 extern long int* alocaMem();
 extern void iniciaAlocador();
 extern void liberaMem();
@@ -6,48 +7,53 @@ extern void imprimeMapa();
 
 int main(int argc, char const *argv[])
 {
-     void *a,*b,*c,*d,*e;
+     void *a,*b,*c,*d,*e,*f,*g;
 
   iniciaAlocador(); 
   imprimeMapa();
-  // 0) estado inicial
 
-  a=(void *) alocaMem(100);
+  a=(void *) alocaMem(50);
   imprimeMapa();
-  b=(void *) alocaMem(130);
+
+  b=(void *) alocaMem(40);
   imprimeMapa();
-  c=(void *) alocaMem(120);
+
+  c=(void *) alocaMem(55);
   imprimeMapa();
-  d=(void *) alocaMem(110);
+
+  d=(void *) alocaMem(35);
   imprimeMapa();
-  // 1) Espero ver quatro segmentos ocupados
+
+  e=(void *) alocaMem(60);
+  imprimeMapa();
 
   liberaMem(b);
-  imprimeMapa(); 
-  liberaMem(d);
-  imprimeMapa(); 
-  // 2) Espero ver quatro segmentos alternando
-  //    ocupados e livres
+  imprimeMapa();
 
-  b=(void *) alocaMem(50);
+  liberaMem(d);
   imprimeMapa();
-  d=(void *) alocaMem(90);
+
+  f=(void *) alocaMem(15);
   imprimeMapa();
-  e=(void *) alocaMem(40);
+
+  g=(void *) alocaMem(41);
   imprimeMapa();
-  // 3) Deduzam
-	
-  liberaMem(c);
-  imprimeMapa(); 
+
+  printf("d=%p e f=%p\n", d, f);
+
+  //Destroi todo o mapa
   liberaMem(a);
   imprimeMapa();
-  liberaMem(b);
+
+  liberaMem(c);
   imprimeMapa();
-  liberaMem(d);
-  imprimeMapa();
+
   liberaMem(e);
   imprimeMapa();
-   // 4) volta ao estado inicial 
-    finalizaAlocador();
-    return 0;
+
+  liberaMem(f);
+  imprimeMapa();
+
+  finalizaAlocador();
+  return 0;
 }

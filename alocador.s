@@ -143,7 +143,7 @@ alocaSpaceLeft:
   subq LIST_END, %r12       #r12 possui space left
 
   cmpq %r12, %r15
-  jg returnAlocaSpaceLeft   #Se nodo maior que spaceLeft retorna 0
+  jg callExpandeHeap        #Se nodo maior que spaceLeft expande heap
 
     ##############
     # seta flags e aloca
@@ -160,6 +160,10 @@ alocaSpaceLeft:
     addq $16, %r12
     addq %rdi, %r12
     movq %r12, LIST_END
+    jmp returnAlocaSpaceLeft
+
+  callExpandeHeap:
+    call expandeHeap
 
   returnAlocaSpaceLeft:
   popq %rbp
@@ -327,9 +331,9 @@ bestFit:
 
   # Percorre lista
   movq HEAP_START, %rbx
-  loopBestfit:
-  cmpq LSIT_END, %rbx
-  jge fimLoopBestfit
+  loopBestFit:
+  cmpq LIST_END, %rbx
+  jge fimLoopBestFit
 
     # Testa flag e tamanho
     cmpq $0, 0(%rbx)
@@ -365,8 +369,9 @@ bestFit:
     movq $1, 0(%rcx)        # Seta a flag
     movq %rcx, %rsi
     addq $16, %rsi
+    movq %rsi, %rax
     call fragmenta
-    jmp returnBestfit
+    jmp returnBestFit
 
   # Nao encontrou nada, aloca logo apos LIST_END
   callAlocaSpaceLeft:
@@ -389,13 +394,13 @@ expandeHeap:
   # Calcula space left e soma 4096
   movq HEAP_END, %rbx
   subq LIST_END, %rbx
-  addq $140, %rbx    # 4096 aqui
+  addq $128, %rbx    # 4096 aqui
   
   multLoop:
   cmpq %rbx, %rdi
   jle fimMultLoop
   
-    addq $140, %rbx    # 4096 aqui
+    addq $128, %rbx    # 4096 aqui
     jmp multLoop
   fimMultLoop:
 
@@ -437,20 +442,20 @@ alocaMem:
     # Testa se a heap esta vazia
     movq HEAP_START, %rbx
     cmpq %rbx, HEAP_END
-    jg callFirstFit   # Se heap não vazia, chama Busca
-    #jg callBestFit    # Se heap não vazia, chama Busca
+    #jg callFirstFit   # Se heap não vazia, chama Busca
+    jg callBestFit    # Se heap não vazia, chama Busca
     #jg callNextFit    # Se heap não vazia, chama Busca
     
         call expandeHeap
         jmp returnAlocaMem
 
-    callFirstFit:
-        call firstFit
-        jmp returnAlocaMem
-
-    #callbestFit:
-    #    call bestFit
+    #callFirstFit:
+    #    call firstFit
     #    jmp returnAlocaMem
+
+    callBestFit:
+        call bestFit
+        jmp returnAlocaMem
 
     #callNextFit:
     #    call nextFit

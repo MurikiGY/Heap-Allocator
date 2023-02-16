@@ -5,17 +5,17 @@ LINK = -dynamic-linker /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 \
 
 all: meuAlocador
 
-meuAlocador: alocador.o main.o
-	ld alocador.o main.o -o meuAlocador $(LINK) -lc
+meuAlocador: meuAlocador.o avalia.o
+	ld meuAlocador.o avalia.o -o meuAlocador $(LINK) -lc
 
-main.o: main.c
-	gcc -g -c main.c -o main.o
+avalia.o: avalia.c
+	gcc -g -c avalia.c -o avalia.o
 
-alocador.o: alocador.s
-	as alocador.s -o alocador.o -g
+meuAlocador.o: meuAlocador.s
+	as meuAlocador.s -o meuAlocador.o -g
 
 clean: 
-	-rm -f alocador.o main.o
+	-rm -f meuAlocador.o avalia.o
 
 purge: clean
 	-rm -f meuAlocador

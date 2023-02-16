@@ -478,13 +478,13 @@ expandeHeap:
   # Calcula space left e soma 4096
   movq HEAP_END, %rbx
   subq LIST_END, %rbx
-  addq $128, %rbx    # 4096 aqui
+  addq $4096, %rbx    # 4096 aqui
   
   multLoop:
   cmpq %rbx, %rdi
   jle fimMultLoop
   
-    addq $128, %rbx    # 4096 aqui
+    addq $4096, %rbx    # 4096 aqui
     jmp multLoop
   fimMultLoop:
 
@@ -527,8 +527,8 @@ alocaMem:
     movq HEAP_START, %rbx
     cmpq %rbx, HEAP_END
     #jg callFirstFit   # Se heap não vazia, chama Busca
-    #jg callBestFit    # Se heap não vazia, chama Busca
-    jg callNextFit    # Se heap não vazia, chama Busca
+    jg callBestFit    # Se heap não vazia, chama Busca
+    #jg callNextFit    # Se heap não vazia, chama Busca
     
         call expandeHeap
         jmp returnAlocaMem
@@ -537,13 +537,13 @@ alocaMem:
     #    call firstFit
     #    jmp returnAlocaMem
 
-    #callBestFit:
-    #    call bestFit
-    #    jmp returnAlocaMem
-
-    callNextFit:
-        call nextFit
+    callBestFit:
+        call bestFit
         jmp returnAlocaMem
+
+    #callNextFit:
+    #    call nextFit
+    #    jmp returnAlocaMem
 
   returnAlocaMem:
   pop %rbp

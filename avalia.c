@@ -1,12 +1,8 @@
-extern long int* alocaMem();
-extern void iniciaAlocador();
-extern void liberaMem();
-extern void finalizaAlocador();
-extern void imprimeMapa();
+#include <stdio.h>
+#include "meuAlocador.h"
 
-int main(int argc, char const *argv[])
-{
-     void *a,*b,*c,*d,*e;
+int main (long int argc, char** argv) {
+  void *a,*b,*c,*d,*e;
 
   iniciaAlocador(); 
   imprimeMapa();
@@ -47,7 +43,7 @@ int main(int argc, char const *argv[])
   imprimeMapa();
   liberaMem(e);
   imprimeMapa();
-   // 4) volta ao estado inicial 
-    finalizaAlocador();
-    return 0;
+   // 4) volta ao estado inicial
+
+  finalizaAlocador();
 }

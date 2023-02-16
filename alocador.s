@@ -256,70 +256,70 @@ firstFit:
 
 
 
-nextFit:
-  pushq %rbp
-  movq %rsp, %rbp
-
-  movq LAST_FIT, %rbx     # rbx percorre do lastFit ao fim da lista
-  loopListEnd:
-  cmpq LIST_END, %rbx     # Testa se terminou de percorrer as listas
-  jge buscaInicio
-
-  cmpq $0, 0(%rbx)        #Verifica flag
-  jne nextNodeNF1
-  cmpq %rdi, 8(%rbx)      #Verifica tamanho
-  jl nextNodeNF1
-
-  #Aloca espaco
-  movq $1, 0(%rbx)        #Seta flag
-  movq %rbx, %rsi
-  addq $16, %rsi
-  movq %rsi, %rax
-  movq %rbx, LAST_FIT     #Atualiza lastFit
-
-  call fragmenta
-  jmp returnFirstFit
-
-  nextNodeNF1:
-    addq 8(%rbx), %rbx
-    addq $16, %rbx
-    jmp loopListEnd
-
-  buscaInicio:
-  movq HEAP_START, %rbx   #Rbx percore lista do inicio
-  loopListStart:
-  cmpq LAST_FIT, %rbx     #Testa se rbx bateu no lastfit
-  je alocaListEnd
-
-  cmpq $0, 0(%rbx)        #Verifica flag
-  jne nextNodeNF2
-  cmpq %rdi, 8(%rbx)      #Verifica tamanho
-  jl nextNodeNF2
-
-  #Aloca espaco
-  movq $1, 0(%rbx)
-  movq %rbx, %rsi
-  addq $16, %rsi
-  movq %rsi, %rax
-  movq %rbx, LAST_FIT     #Atualiza lastFit
-
-  call fragmenta
-  jmp returnFirstFit
-
-  nextNodeNF2:
-    addq 8(%rbx), %rbx
-    addq $16, %rbx
-    jmp loopListStart
-
-  alocaListEnd:
-  #Nao encontrou nodo, aloca no fim
-  call alocaSpaceLeft
-  movq LIST_END, %r12
-  movq %r12, LAST_FIT
-
-  returnNextFit:
-  popq %rbp
-  ret
+#nextFit:
+#  pushq %rbp
+#  movq %rsp, %rbp
+#
+#  movq LAST_FIT, %rbx     # rbx percorre do lastFit ao fim da lista
+#  loopListEnd:
+#  cmpq LIST_END, %rbx     # Testa se terminou de percorrer as listas
+#  jge buscaInicio
+#
+#  cmpq $0, 0(%rbx)        #Verifica flag
+#  jne nextNodeNF1
+#  cmpq %rdi, 8(%rbx)      #Verifica tamanho
+#  jl nextNodeNF1
+#
+#  #Aloca espaco
+#  movq $1, 0(%rbx)        #Seta flag
+#  movq %rbx, %rsi
+#  addq $16, %rsi
+#  movq %rsi, %rax
+#  movq %rbx, LAST_FIT     #Atualiza lastFit
+#
+#  call fragmenta
+#  jmp returnFirstFit
+#
+#  nextNodeNF1:
+#    addq 8(%rbx), %rbx
+#    addq $16, %rbx
+#    jmp loopListEnd
+#
+#  buscaInicio:
+#  movq HEAP_START, %rbx   #Rbx percore lista do inicio
+#  loopListStart:
+#  cmpq LAST_FIT, %rbx     #Testa se rbx bateu no lastfit
+#  je alocaListEnd
+#
+#  cmpq $0, 0(%rbx)        #Verifica flag
+#  jne nextNodeNF2
+#  cmpq %rdi, 8(%rbx)      #Verifica tamanho
+#  jl nextNodeNF2
+#
+#  #Aloca espaco
+#  movq $1, 0(%rbx)
+#  movq %rbx, %rsi
+#  addq $16, %rsi
+#  movq %rsi, %rax
+#  movq %rbx, LAST_FIT     #Atualiza lastFit
+#
+#  call fragmenta
+#  jmp returnFirstFit
+#
+#  nextNodeNF2:
+#    addq 8(%rbx), %rbx
+#    addq $16, %rbx
+#    jmp loopListStart
+#
+#  alocaListEnd:
+#  #Nao encontrou nodo, aloca no fim
+#  call alocaSpaceLeft
+#  movq LIST_END, %r12
+#  movq %r12, LAST_FIT
+#
+#  returnNextFit:
+#  popq %rbp
+#  ret
 
 
 
@@ -338,7 +338,7 @@ alocaNodo:
     cmpq %rdi, -8(%rsi)     #se tamanho eh suficiente
     jl fimAlocaNodo
       movq $1, -16(%rsi)
-      movq %rdi, -8(%rsi)
+#      movq %rdi, -8(%rsi)
       movq %rsi, %rax
       call fragmenta
 
@@ -348,61 +348,61 @@ alocaNodo:
 
 
 
-#nextFit:
-#  pushq %rbp
-#  movq %rsp, %rbp
-#  subq $16, %rsp
-#
-#  movq $0, %rax
-#
-#  movq %rsi, -8(%rbp)         #salva registrador rsi
-#  movq %rdx, -16(%rbp)        #salva registrador rdx
-#  movq LAST_FIT, %rdx
-#
-#  movq %rdx, %rsi
-#  addq $16, %rsi
-#  call alocaNodo
-#  cmpq $0, %rax               #se conseguir alocar no nodo, retorna 
-#  jne returnNF
-#
-#  loopNF:
-#  addq  8(%rdx), %rdx         #salta rdx para proximo nodo
-#  addq $16, %rdx
-#
-#  cmpq %rdx, LAST_FIT         #se rdx voltou ao Last Fit, nao ha nodo disponivel
-#  je notFoundNF
-#
-#    cmpq %rdx, LIST_END
-#    jg testNodeNF
-#
-#      movq HEAP_START, %rdx   
-#      cmpq %rdx, LAST_FIT     #se rdx voltou ao Last Fit, nao ha nodo disponivel
-#      je notFoundNF
-#    testNodeNF:
-#    movq %rdx, %rsi
-#    addq $16, %rsi
-#    call alocaNodo
-#    cmpq $0, %rax             #se conseguiu, retorna
-#    jne returnNF
-#
-#    jmp loopNF
-#    
-#  notFoundNF:
-#  #movq $LIST_END, LAST_FIT #nao alterar antigo last fit neste caso?
-#
-#  #se chegou aqui, nodo nao encontrado
-#  call alocaSpaceLeft
-#  cmpq $0, %rax             #se alocado no space left, retorna
-#  jne returnNF
-#    call expandeHeap
-#
-#  returnNF:
-#  movq %rdx, LAST_FIT
-#  movq -8(%rbp), %rsi
-#  movq -16(%rbp), %rdx
-#  addq $16, %rsp
-#  popq %rbp
-#  ret
+nextFit:
+  pushq %rbp
+  movq %rsp, %rbp
+  subq $16, %rsp
+
+  movq $0, %rax
+
+  movq %rsi, -8(%rbp)         #salva registrador rsi
+  movq %rdx, -16(%rbp)        #salva registrador rdx
+  movq LAST_FIT, %rdx
+
+  movq %rdx, %rsi
+  addq $16, %rsi
+  call alocaNodo
+  cmpq $0, %rax               #se conseguir alocar no nodo, retorna 
+  jne returnNF
+
+  loopNF:
+  addq  8(%rdx), %rdx         #salta rdx para proximo nodo
+  addq $16, %rdx
+
+  cmpq %rdx, LAST_FIT         #se rdx voltou ao Last Fit, nao ha nodo disponivel
+  je notFoundNF
+
+    cmpq %rdx, LIST_END
+    jg testNodeNF
+
+      movq HEAP_START, %rdx   
+      cmpq %rdx, LAST_FIT     #se rdx voltou ao Last Fit, nao ha nodo disponivel
+      je notFoundNF
+    testNodeNF:
+    movq %rdx, %rsi
+    addq $16, %rsi
+    call alocaNodo
+    cmpq $0, %rax             #se conseguiu, retorna
+    jne returnNF
+
+    jmp loopNF
+    
+  notFoundNF:
+  #movq $LIST_END, LAST_FIT #nao alterar antigo last fit neste caso?
+
+  #se chegou aqui, nodo nao encontrado
+  call alocaSpaceLeft
+  cmpq $0, %rax             #se alocado no space left, retorna
+  jne returnNF
+    call expandeHeap
+
+  returnNF:
+  movq %rdx, LAST_FIT
+  movq -8(%rbp), %rsi
+  movq -16(%rbp), %rdx
+  addq $16, %rsp
+  popq %rbp
+  ret
 
 
 

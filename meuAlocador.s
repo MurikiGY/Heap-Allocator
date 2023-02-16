@@ -557,7 +557,41 @@ liberaMem:
 
   movq $0, -16(%rdi)        # Seta flag pra zero
 
+  # Percorre juntando
+  movq HEAP_START, %rbx
+  loopJuntaNodo:
+  cmpq LIST_END, %rbx
+  jge returnLiberaMem
+    
+    cmpq $0, 0(%rbx)
+    jne juntaNextNode
+
+    # r12 aponta para o proximo nodo
+    movq %rbx, %r12
+    addq 8(%rbx), %r12
+    addq $16, %r12
+
+    # Testa se chegou no fim
+    cmpq LIST_END, %r12
+    jge returnLiberaMem
+
+    # Testa flag
+    cmpq $0, 0(%r12)
+    jne juntaNextNode
+
+      # Junta nodos
+      movq 8(%r12), %r12
+      addq $16, %r12
+      addq %r12, 8(%rbx)
+      jmp loopJuntaNodo
+
+  juntaNextNode:
+    addq $16, %rbx
+    addq -8(%rbx), %rbx
+    jmp loopJuntaNodo
+
 # Retorna
+  returnLiberaMem:
   popq %rbp
   ret
 
